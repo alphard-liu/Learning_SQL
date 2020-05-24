@@ -11,3 +11,12 @@
 - LEFT(TEXT, N)
 - RIGHT(TEXT, N)
 - <> = !=
+- CASE WHEN ... THEN ... ELSE ... END
+- CONCAT
+- ALL
+- ANY
+- SUM
+- COUNT
+- GROUP BY
+- HAVING
+- 

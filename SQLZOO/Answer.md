@@ -1,4 +1,5 @@
-# SQL Zoo Answers
+# SQLZOO Answers
+https://sqlzoo.net/wiki/SQL_Tutorial
 
 ## SELECT basics
 
@@ -139,7 +140,8 @@ WHERE (area > 3000000) OR (population > 250000000)
 ```SQL
 SELECT name, population, area
 FROM world
-WHERE (area > 3000000) XOR (population > 250000000)
+WHERE (area > 3000000 AND population < 250000000)
+  OR (area < 3000000 AND population > 250000000)
 ```
 
 ### 9. Roundin
@@ -356,7 +358,7 @@ FROM nobel
 WHERE winner ='EUGENE O''NEILL'
 ```
 
-13. Knights of the realm
+### 13. Knights of the realm
 
 Knights in order
 
@@ -366,9 +368,10 @@ Knights in order
 SELECT winner, yr, subject
 FROM nobel
 WHERE winner LIKE 'Sir%'
+ORDER BY yr DESC, winner
 ```
 
-14. Chemistry and Physics last
+### 14. Chemistry and Physics last
 
 The expression subject IN **('Chemistry','Physics')** can be used as a value - it will be 0 or 1.
 
@@ -386,4 +389,224 @@ SELECT winner, subject
 FROM nobel
 WHERE yr=1984
 ORDER BY CASE WHEN subject IN ('Chemistry', 'Physics') THEN 1 ELSE 0 END, subject, winner
+```
+
+## SELECT within SELECT Tutorial
+
+**world**
+
+| name | continent | area | population | gdp |
+|---|---|---|---|---|
+| Afghanistan | Asia | 652230 | 25500100 | 20343000000 |
+| Albania | Europe | 28748 | 2831741 | 12960000000 |
+| Algeria | Africa | 2381741 | 37100000 | 188681000000 |
+| Andorra | Europe | 468 | 78115 | 3712000000 |
+| Angola | Africa | 1246700 | 20609294 | 100990000000 |
+
+### 1. Bigger than Russia
+
+**List each country name where the population is larger than that of 'Russia'.**
+
+`world(name, continent, area, population, gdp)`
+
+```SQL
+SELECT name
+FROM world
+WHERE population > (SELECT population FROM world WHERE name = 'Russia')
+```
+
+### 2. Richer than UK
+
+**Show the countries in Europe with a per capita GDP greater than 'United Kingdom'.**
+
+***Per Capita GDP***
+
+```SQL
+SELECT name
+FROM world
+WHERE (continent = 'Europe') AND gdp/population > (SELECT gdp/population FROM world where name = 'United Kingdom')
+```
+
+### 3. Neighbours of Argentina and Australia
+
+**List the name and continent of countries in the continents containing either Argentina or Australia. Order by name of the country.**
+
+```SQL
+SELECT name, continent
+FROM world
+WHERE continent IN (SELECT continent FROM world WHERE name IN ('Argentina', 'Australia'))
+```
+
+### 4. Between Canada and Poland
+
+**Which country has a population that is more than Canada but less than Poland? Show the name and the population.**
+
+```SQL
+SELECT name, population
+FROM world
+WHERE (population > (SELECT population FROM world WHERE name = 'Canada')) AND
+(population < (SELECT population FROM world WHERE name = 'Poland'))
+```
+
+### 5. Percentages of Germany
+
+Germany (population 80 million) has the largest population of the countries in Europe. Austria (population 8.5 million) has 11% of the population of Germany.
+
+**Show the name and the population of each country in Europe. Show the population as a percentage of the population of Germany.**
+
+```SQL
+SELECT name, CONCAT(ROUND(population/(SELECT population FROM world WHERE name = 'Germany')*100, 0), '%')
+FROM world
+WHERE continent = 'Europe'
+```
+
+### 6. Bigger than every country in Europe
+
+**Which countries have a GDP greater than every country in Europe? [Give the name only.] (Some countries may have NULL gdp values)**
+
+```SQL
+SELECT name
+FROM world
+WHERE gdp > ALL(SELECT gdp FROM world WHERE (continent = 'Europe') AND (gdp > 0))
+```
+
+### 7. Largest in each continent
+
+**Find the largest country (by area) in each continent, show the continent, the name and the area:**
+
+```SQL
+SELECT continent, name, area
+FROM world x
+WHERE area >= ALL(SELECT area FROM world y WHERE y.continent=x.continent AND area>0)
+```
+
+***Using correlated subqueries***
+A correlated subquery works like a nested loop: the subquery only has access to rows related to a single record at a time in the outer query. The technique relies on table aliases to identify two different uses of the same table, one in the outer query and the other in the subquery.
+
+One way to interpret the line in the **WHERE** clause that references the two table is “… where the correlated values are the same”.
+
+In the example provided, you would say “select the country details from world where the population is greater than or equal to the population of all countries where the continent is the same”.
+
+### 8. First country of each continent (alphabetically)
+
+**List each continent and the name of the country that comes first alphabetically.**
+
+```SQL
+SELECT continent, name
+FROM world x
+WHERE name <= ALL(SELECT name FROM world y WHERE x.continent = y.continent)
+```
+
+### 9.
+
+**Find the continents where all countries have a population <= 25000000. Then find the names of the countries associated with these continents. Show name, continent and population.**
+
+```SQL
+SELECT name, continent, population
+FROM world x
+WHERE 25000000 > ALL(SELECT population FROM world y WHERE x.continent = y.continent AND y.population > 0)
+```
+
+### 10.
+
+**Some countries have populations more than three times that of any of their neighbours (in the same continent). Give the countries and continents.**
+
+```SQL
+SELECT name, continent
+FROM world x
+WHERE population >= ALL(SELECT 3*population FROM world y WHERE x.name != y.name AND x.continent = y.continent AND y.population > 0)
+```
+
+## SUM and COUNT
+
+**world**
+
+| name | continent | area | population | gdp |
+|---|---|---|---|---|
+| Afghanistan | Asia | 652230 | 25500100 | 20343000000 |
+| Albania | Europe | 28748 | 2831741 | 12960000000 |
+| Algeria | Africa | 2381741 | 37100000 | 188681000000 |
+| Andorra | Europe | 468 | 78115 | 3712000000 |
+| Angola | Africa | 1246700 | 20609294 | 100990000000 |
+
+### 1. Total world population
+
+Show the total **population** of the world.
+
+`world(name, continent, area, population, gdp)`
+
+```SQL
+SELECT SUM(population)
+FROM world
+```
+
+### 2. List of continents
+
+List all the continents - just once each.
+
+```SQL
+SELECT DISTINCT(continent)
+FROM world
+```
+
+### 3. GDP of Africa
+
+Give the total GDP of Africa
+
+```SQL
+SELECT SUM(gdp)
+FROM world
+WHERE continent = 'Africa'
+```
+
+### 4. Count the big countries
+
+How many countries have an **area** of at least 1000000
+
+```SQL
+SELECT COUNT(name)
+FROM world
+WHERE area >= 1000000
+```
+
+### 5. Baltic states population
+
+What is the total **population** of ('Estonia', 'Latvia', 'Lithuania')
+
+```SQL
+SELECT SUM(population)
+FROM world
+WHERE name IN ('Estonia', 'Latvia', 'Lithuania')
+```
+
+### 6. Using GROUP BY and HAVING
+
+For each **continent** show the **continent** and number of countries.
+
+```SQL
+SELECT continent, COUNT(name)
+FROM world
+GROUP BY continent
+```
+
+### 7. Counting big countries in each continent
+
+For each **continent** show the **continent** and number of countries with populations of at least 10 million.
+
+```SQL
+SELECT continent, COUNT(name)
+FROM world
+WHERE population >= 10000000
+GROUP BY continent
+```
+
+### 8. Counting big continents
+
+List the continents that **have** a total population of at least 100 million.
+
+```SQL
+SELECT continent
+FROM world
+GROUP BY continent
+HAVING SUM(population) >= 100000000
 ```
